@@ -301,3 +301,35 @@ void GLSLProgram::PrintActiveAttribs()
 
   delete[] name;
 }
+
+bool GLSLProgram::CompileAndLinkShaders(const string& v, const string& f, const string& g, const string& tc, const string& te)
+{
+  if(!CompileShaderFromFile(v.c_str(), GLSLShader::VERTEX))
+  {
+    BOOST_LOG_SEV(get_global_log(), error) << "Vertex Shader " << v.c_str() << " failed\n" << Log() << std::endl << "Hit any key to exit";
+    char c;
+    std::cin >> c;
+    exit(1);
+  }
+
+//fragment
+  if(!CompileShaderFromFile(f.c_str(), GLSLShader::FRAGMENT))
+  {
+    BOOST_LOG_SEV(get_global_log(), error) << "Fragment Shader " << f.c_str() << " failed\n" << Log() << std::endl << "Hit any key to exit";
+    char c;
+    std::cin >> c;
+    exit(1);
+  }
+
+  if(!Link())
+  {
+    BOOST_LOG_SEV(get_global_log(), error) << "Program failed to link\n" << Log() << std::endl << "Hit any key to exit";
+    char c;
+    std::cin >> c;
+    exit(1);
+  }
+  Use();
+  PrintActiveAttribs();
+  PrintActiveUniforms();
+  return true;
+}

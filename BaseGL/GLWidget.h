@@ -13,6 +13,9 @@
 #include <string>
 #include "Logger.h"
 #include "GLSLProgram.h"
+#include "Text.h"
+#include "Camera.h"
+#include "Drawable.h"
 
 class GLWidget : public QGLWidget
 {
@@ -24,7 +27,7 @@ public:
 protected:
   typedef void (APIENTRY *_glGenVertexArrays) (GLsizei, GLuint*);
   typedef void (APIENTRY *_glBindVertexArray) (GLuint);
-  typedef std::vector<string> ShaderFiles;
+  typedef std::vector<Drawable*> SceneObjects;
 
 protected:
   //Qt functions
@@ -34,8 +37,6 @@ protected:
   virtual void keyPressEvent(QKeyEvent* e);
   
   virtual void FreeResources();
-  virtual void SetMatrices();
-  virtual void CompileAndLinkShaders();
   
 protected:
   void DumpGLInfo(bool dump_extentions = false);
@@ -47,17 +48,16 @@ protected:
   QTimer* _timer;
   QElapsedTimer _elapsed;
 
-  GLuint _vao;
-
-  GLSLProgram _program;
-  glm::mat4 _model;
-  glm::mat4 _view;
-  glm::mat4 _projection;
-
-  ShaderFiles _vertex_shader_files;
-  ShaderFiles _fragment_shader_files;
+  //GLuint _vao;
+  Text* _text;
+  GLSLProgram _text_program;
+  Camera _camera;
+  int _width;
+  int _height;
+  unsigned int _frames;
 
   boost::log::sources::severity_logger<severity_level>& _log;
+  SceneObjects _objs;
 
 protected:
   _glGenVertexArrays glGenVertexArrays;
