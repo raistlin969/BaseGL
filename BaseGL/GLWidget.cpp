@@ -67,7 +67,7 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("mult_lights_vert.glsl", "mult_lights_frag.glsl");
+  p->CompileAndLinkShaders("direction_vert.glsl", "direction_frag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
@@ -75,16 +75,17 @@ void GLWidget::initializeGL()
   torus->SetPosition(vec3(-1.0f, 1.0f, -1.0f));
   Material* m = new Material(p);
   m->Ambient(0.1f, 0.1f, 0.1f);
-  m->Diffuse(0.4f, 0.4f, 0.4f);
+  m->Diffuse(0.8f, 0.8f, 0.8f);
   m->Specular(0.9f, 0.9f, 0.9f);
-  m->Shininess(100.0f);
+  m->Shininess(180.0f);
   torus->SetMaterial(m);
-  //_objs.push_back(torus);
+  torus->Rotate(90.0f, vec3(0.0f, 1.0f, 0.0f));
+  _objs.push_back(torus);
   VboTorus* t = new VboTorus(0.5f, 0.3f, 50, 50);
   t->SetPosition(vec3(2.0f, 0.0f, 0.0f));
   Material* mm = new Material(p);
   mm->Ambient(0.1f, 0.1f, 0.1f);
-  mm->Diffuse(0.1f, 0.1f, 0.1f);
+  mm->Diffuse(0.4f, 0.4f, 0.4f);
   mm->Specular(0.9f, 0.9f, 0.9f);
   mm->Shininess(180.0f);
   t->SetMaterial(mm);
@@ -95,26 +96,28 @@ void GLWidget::initializeGL()
   plane->SetPosition(vec3(0.0f, -0.45f, 0.0f));
   _objs.push_back(plane);
 
-  Mesh* pig = new Mesh("pig_triangulated.obj");
-  pig->SetMaterial(m);
-  pig->SetPosition(vec3(0.0f, 0.0f, 0.0f));
-  pig->Rotate(90.0f, vec3(0.0f, 1.0f, 0.0f));
-  _objs.push_back(pig);
+  p->SetUniform("light.position", _camera.View() * vec4(1.0f, 0.0f, 0.0f, 0.0f));
+  p->SetUniform("light.intensity", vec3(0.8f, 0.8f, 0.8f));
+  //Mesh* pig = new Mesh("pig_triangulated.obj");
+  //pig->SetMaterial(m);
+  //pig->SetPosition(vec3(0.0f, 0.0f, 0.0f));
+  //pig->Rotate(90.0f, vec3(0.0f, 1.0f, 0.0f));
+  //_objs.push_back(pig);
 
-  char name[20];
-  float x, z;
-  for(int i = 0; i < 5; i++)
-  {
-    _snprintf(name, 20, "lights[%d].position", i);
-    x = 2.0 * cos((TWOPI / 5) * i);
-    z = 2.0 * sin((TWOPI / 5) * i);
-    p->SetUniform(name, _camera.View() * vec4(x, 1.2f, z + 1.0f, 1.0f));
-  }
-  p->SetUniform("lights[0].intensity", vec3(0.0f, 0.8f, 0.8f));
-  p->SetUniform("lights[1].intensity", vec3(0.0f, 0.0f, 0.8f));
-  p->SetUniform("lights[2].intensity", vec3(0.8f, 0.0f, 0.0f));
-  p->SetUniform("lights[3].intensity", vec3(0.0f, 0.8f, 0.0f));
-  p->SetUniform("lights[4].intensity", vec3(0.8f, 0.8f, 0.8f));
+  //char name[20];
+  //float x, z;
+  //for(int i = 0; i < 5; i++)
+  //{
+  //  _snprintf(name, 20, "lights[%d].position", i);
+  //  x = 2.0 * cos((TWOPI / 5) * i);
+  //  z = 2.0 * sin((TWOPI / 5) * i);
+  //  p->SetUniform(name, _camera.View() * vec4(x, 1.2f, z + 1.0f, 1.0f));
+  //}
+  //p->SetUniform("lights[0].intensity", vec3(0.0f, 0.8f, 0.8f));
+  //p->SetUniform("lights[1].intensity", vec3(0.0f, 0.0f, 0.8f));
+  //p->SetUniform("lights[2].intensity", vec3(0.8f, 0.0f, 0.0f));
+  //p->SetUniform("lights[3].intensity", vec3(0.0f, 0.8f, 0.0f));
+  //p->SetUniform("lights[4].intensity", vec3(0.8f, 0.8f, 0.8f));
 }
 
 void GLWidget::resizeGL( int w, int h )
