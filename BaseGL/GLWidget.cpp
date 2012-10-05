@@ -67,7 +67,7 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("direction_vert.glsl", "direction_frag.glsl");
+  p->CompileAndLinkShaders("phong_vert.glsl", "phong_frag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
@@ -96,7 +96,7 @@ void GLWidget::initializeGL()
   plane->SetPosition(vec3(0.0f, -0.45f, 0.0f));
   _objs.push_back(plane);
 
-  p->SetUniform("light.position", _camera.View() * vec4(1.0f, 0.0f, 0.0f, 0.0f));
+  p->SetUniform("light.position", _camera.View() * vec4(1.0f, 1.0f, 1.0f, 0.0f));
   p->SetUniform("light.intensity", vec3(0.8f, 0.8f, 0.8f));
   //Mesh* pig = new Mesh("pig_triangulated.obj");
   //pig->SetMaterial(m);
