@@ -28,9 +28,9 @@ vec3 ads()
   vec3 s = normalize(vec3(light.position) - position);
 
   vec3 v = normalize(vec3(-position));
-  vec3 r = reflect(-s, n);
+  vec3 h = normalize(v + s);
   vec3 I = light.intensity;
-  return I * (material.ka + material.kd * max(dot(s, n), 0.0) + material.ks * pow(max(dot(r,v),0.0), material.shininess));
+  return I * (material.ka + material.kd * max(dot(s, n), 0.0) + material.ks * pow(max(dot(h,n),0.0), material.shininess));
 }
 
 void main()
