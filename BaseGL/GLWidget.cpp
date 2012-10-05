@@ -7,9 +7,13 @@
 #include <sstream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform2.hpp>
-
+#include <cstdlib>
+#include <cstdio>
 #include "VboTorus.h"
 #include "Material.h"
+#include "Plane.h"
+#include "Mesh.h"
+#include "Defines.h"
 
 GLWidget::GLWidget(const QGLFormat& format, QWidget* parent)
   : QGLWidget(format, parent), _log(get_global_log())
@@ -63,33 +67,54 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("diffuse_vert.glsl", "diffuse_frag.glsl");
+  p->CompileAndLinkShaders("mult_lights_vert.glsl", "mult_lights_frag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
   VboTorus* torus = new VboTorus(0.7f, 0.3f, 50, 50);
-  torus->SetPosition(vec3(-1.0f, -1.0f, 0.0f));
+  torus->SetPosition(vec3(-1.0f, 1.0f, -1.0f));
   Material* m = new Material(p);
-  m->Ambient(0.9f, 0.5f, 0.3f);
-  m->Diffuse(0.9f, 0.5f, 0.3f);
-  m->Specular(0.8f, 0.8f, 0.8f);
+  m->Ambient(0.1f, 0.1f, 0.1f);
+  m->Diffuse(0.4f, 0.4f, 0.4f);
+  m->Specular(0.9f, 0.9f, 0.9f);
   m->Shininess(100.0f);
   torus->SetMaterial(m);
-  _objs.push_back(torus);
+  //_objs.push_back(torus);
   VboTorus* t = new VboTorus(0.5f, 0.3f, 50, 50);
   t->SetPosition(vec3(2.0f, 0.0f, 0.0f));
   Material* mm = new Material(p);
-  mm->Ambient(0.1f, 0.8f, 0.3f);
-  mm->Diffuse(0.1f, 0.8f, 0.3f);
-  mm->Specular(0.8f, 0.8f, 0.8f);
-  mm->Shininess(100.0f);
+  mm->Ambient(0.1f, 0.1f, 0.1f);
+  mm->Diffuse(0.1f, 0.1f, 0.1f);
+  mm->Specular(0.9f, 0.9f, 0.9f);
+  mm->Shininess(180.0f);
   t->SetMaterial(mm);
-  _objs.push_back(t);
-  vec4 world_light = vec4(5.0f, 5.0f, 2.0f, 1.0f);
-  p->SetUniform("light.ld", 1.0f, 1.0f, 1.0f);
-  p->SetUniform("light.position", _camera.View() * world_light);
-  p->SetUniform("light.la", 0.4f, 0.4f, 0.4f);
-  p->SetUniform("light.ls", 1.0f, 1.0f, 1.0f);
+  //_objs.push_back(t);
+
+  Plane* plane = new Plane(10.0f, 10.0f, 100, 100);
+  plane->SetMaterial(mm);
+  plane->SetPosition(vec3(0.0f, -0.45f, 0.0f));
+  _objs.push_back(plane);
+
+  Mesh* pig = new Mesh("pig_triangulated.obj");
+  pig->SetMaterial(m);
+  pig->SetPosition(vec3(0.0f, 0.0f, 0.0f));
+  pig->Rotate(90.0f, vec3(0.0f, 1.0f, 0.0f));
+  _objs.push_back(pig);
+
+  char name[20];
+  float x, z;
+  for(int i = 0; i < 5; i++)
+  {
+    _snprintf(name, 20, "lights[%d].position", i);
+    x = 2.0 * cos((TWOPI / 5) * i);
+    z = 2.0 * sin((TWOPI / 5) * i);
+    p->SetUniform(name, _camera.View() * vec4(x, 1.2f, z + 1.0f, 1.0f));
+  }
+  p->SetUniform("lights[0].intensity", vec3(0.0f, 0.8f, 0.8f));
+  p->SetUniform("lights[1].intensity", vec3(0.0f, 0.0f, 0.8f));
+  p->SetUniform("lights[2].intensity", vec3(0.8f, 0.0f, 0.0f));
+  p->SetUniform("lights[3].intensity", vec3(0.0f, 0.8f, 0.0f));
+  p->SetUniform("lights[4].intensity", vec3(0.8f, 0.8f, 0.8f));
 }
 
 void GLWidget::resizeGL( int w, int h )
@@ -138,10 +163,10 @@ void GLWidget::keyPressEvent( QKeyEvent* e )
       _camera.MoveBack();
       break;
     case Qt::Key_Q:
-      _camera.DeltaBearing(-0.1f);
+      _camera.DeltaBearing(0.1f);
       break;
     case Qt::Key_E:
-      _camera.DeltaBearing(0.1f);
+      _camera.DeltaBearing(-0.1f);
       break;
     case Qt::Key_Z:
       _camera.DeltaPitch(-0.1f);

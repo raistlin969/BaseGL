@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "Material.h"
 
 class Material;
 class GLSLProgram;

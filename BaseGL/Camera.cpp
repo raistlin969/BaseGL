@@ -18,7 +18,7 @@ Camera::Camera()
   _near = 0.3f;
   _far = 100.0f;
   _aspect_ratio = 800.0f / 600.0f;
-  _right = vec3(sin(_pitch - PI/2.0f), 0.0f, cos(_pitch - PI/2.0f));
+  _right = vec3(sin(_pitch + PI/2.0f), 0.0f, cos(_pitch - PI/2.0f));
   _direction = vec3(cos(_bearing) * sin(_pitch), sin(_bearing), cos(_bearing) * cos(_pitch));
   _up = glm::cross(_right, _direction);
 }
