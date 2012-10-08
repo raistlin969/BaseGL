@@ -68,7 +68,7 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("spotlight_vertex.glsl", "spotlight_frag.glsl");
+  p->CompileAndLinkShaders("fog_vert.glsl", "fog_frag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
@@ -77,23 +77,28 @@ void GLWidget::initializeGL()
   Material* m = new Material(p);
   m->Ambient(0.9f * 0.3f, 0.5f * 0.3f, 0.3f * 0.3f);
   m->Diffuse(0.9f, 0.5f, 0.3f);
-  m->Specular(0.95f, 0.95f, 0.95f);
-  m->Shininess(100.0f);
+  m->Specular(0.0f, 0.0f, 0.0f);
+  m->Shininess(180.0f);
   torus->SetMaterial(m);
   torus->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
-  _objs.push_back(torus);
+  //_objs.push_back(torus);
 
-  VBOTeapot* tea = new VBOTeapot(14, glm::mat4(1.0f));
-  tea->SetMaterial(m);
-  tea->SetPosition(vec3(0.0f, 0.0f, -2.0f));
-  tea->Rotate(45.0f, vec3(0.0f, 1.0f, 0.0f));
-  tea->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
-  _objs.push_back(tea);
+  float dist = 0.0f;
+  for(int i = 0; i < 4; ++i)
+  {
+    VBOTeapot* tea = new VBOTeapot(14, glm::mat4(1.0f));
+    tea->SetMaterial(m);
+    tea->SetPosition(vec3(dist * 0.6f - 1.0f, 0.0f, -dist));
+    tea->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
+    _objs.push_back(tea);
+    dist += 7.0f;
+  }
+  
 
   Material* mm = new Material(p);
   mm->Ambient(0.2f, 0.2f, 0.2f);
   mm->Diffuse(0.7f, 0.7f, 0.7f);
-  mm->Specular(0.9f, 0.9f, 0.9f);
+  mm->Specular(0.0f, 0.0f, 0.0f);
   mm->Shininess(180.0f);
 
   Plane* plane = new Plane(50.0f, 50.0f, 1, 1);
@@ -102,9 +107,9 @@ void GLWidget::initializeGL()
   _objs.push_back(plane);
 
   p->SetUniform("light.intensity", vec3(0.9f, 0.9f, 0.9f));
-  p->SetUniform("light.exponent", 30.f);
-  p->SetUniform("light.cutoff", 15.0f);
-
+  p->SetUniform("fog.max_dist", 30.0f);
+  p->SetUniform("fog.min_dist", 1.0f);
+  p->SetUniform("fog.color", vec3(0.5f, 0.5f, 0.5f));
   _angle = 0.0f;
 }
 
@@ -120,7 +125,7 @@ void GLWidget::resizeGL( int w, int h )
 
 void GLWidget::paintGL()
 {
-  glClearColor(0.0, 0.0, 0.0, 1.0);
+  glClearColor(0.5, 0.5, 0.5, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   vec4 light_pos = vec4(10.0f * cos(_angle), 10.0f, 10.0f * sin(_angle), 1.0f);
   mat4 view = _camera.View();
@@ -129,8 +134,6 @@ void GLWidget::paintGL()
     GLSLProgram* p = (*it)->Program();
     mat4 mv = view * (*it)->Model();
     p->SetUniform("light.position", view * light_pos);
-    mat3 nm = mat3(vec3(view[0]), vec3(view[1]), vec3(view[2]));
-    p->SetUniform("light.direction", nm * vec3(-light_pos));
     p->SetUniform("model_view_matrix", mv);
     p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
     p->SetUniform("mvp", _camera.Projection() * mv);
