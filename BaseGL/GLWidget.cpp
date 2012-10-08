@@ -68,7 +68,7 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("phong_vert.glsl", "phong_frag.glsl");
+  p->CompileAndLinkShaders("spotlight_vertex.glsl", "spotlight_frag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
