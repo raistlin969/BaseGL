@@ -31,6 +31,8 @@ public:
   void MoveBack();
   void StrafeLeft();
   void StrafeRight();
+  void Up();
+  void Down();
   mat4 Projection();
   mat4 View();
   void Projection(float fov, float aspect, float near, float far);

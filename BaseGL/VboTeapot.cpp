@@ -267,5 +267,6 @@ vec3 VBOTeapot::EvaluateNormal( int gridU, int gridV, float *B, float *dB, vec3 
 void VBOTeapot::Render()
 {
     glBindVertexArray(_vao);
+    _material->Bind();
     glDrawElements(GL_TRIANGLES, 6 * _faces, GL_UNSIGNED_INT, ((GLubyte *)NULL + (0)));
 }

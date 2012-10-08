@@ -55,6 +55,7 @@ protected:
   int _width;
   int _height;
   unsigned int _frames;
+  float _angle;
 
   boost::log::sources::severity_logger<severity_level>& _log;
   SceneObjects _objs;

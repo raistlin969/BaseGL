@@ -56,6 +56,16 @@ void Camera::StrafeRight()
   _position += _right * 0.1f;
 }
 
+void Camera::Up()
+{
+  _position.y += 0.1f;
+}
+
+void Camera::Down()
+{
+  _position.y -= 0.1f;
+}
+
 mat4 Camera::Projection()
 {
   return _projection;

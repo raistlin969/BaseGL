@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include "VboTorus.h"
+#include "VboTeapot.h"
 #include "Material.h"
 #include "Plane.h"
 #include "Mesh.h"
@@ -71,53 +72,40 @@ void GLWidget::initializeGL()
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
-  VboTorus* torus = new VboTorus(0.7f, 0.3f, 50, 50);
-  torus->SetPosition(vec3(-1.0f, 1.0f, -1.0f));
+  VboTorus* torus = new VboTorus(1.75f * 0.75f, 0.75f * 0.75f, 50, 50);
+  torus->SetPosition(vec3(-1.0f, 0.75f, 3.0f));
   Material* m = new Material(p);
-  m->Ambient(0.1f, 0.1f, 0.1f);
-  m->Diffuse(0.8f, 0.8f, 0.8f);
-  m->Specular(0.9f, 0.9f, 0.9f);
-  m->Shininess(180.0f);
+  m->Ambient(0.9f * 0.3f, 0.5f * 0.3f, 0.3f * 0.3f);
+  m->Diffuse(0.9f, 0.5f, 0.3f);
+  m->Specular(0.95f, 0.95f, 0.95f);
+  m->Shininess(100.0f);
   torus->SetMaterial(m);
-  torus->Rotate(90.0f, vec3(0.0f, 1.0f, 0.0f));
+  torus->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
   _objs.push_back(torus);
-  VboTorus* t = new VboTorus(0.5f, 0.3f, 50, 50);
-  t->SetPosition(vec3(2.0f, 0.0f, 0.0f));
+
+  VBOTeapot* tea = new VBOTeapot(14, glm::mat4(1.0f));
+  tea->SetMaterial(m);
+  tea->SetPosition(vec3(0.0f, 0.0f, -2.0f));
+  tea->Rotate(45.0f, vec3(0.0f, 1.0f, 0.0f));
+  tea->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
+  _objs.push_back(tea);
+
   Material* mm = new Material(p);
-  mm->Ambient(0.1f, 0.1f, 0.1f);
-  mm->Diffuse(0.4f, 0.4f, 0.4f);
+  mm->Ambient(0.2f, 0.2f, 0.2f);
+  mm->Diffuse(0.7f, 0.7f, 0.7f);
   mm->Specular(0.9f, 0.9f, 0.9f);
   mm->Shininess(180.0f);
-  t->SetMaterial(mm);
-  //_objs.push_back(t);
 
-  Plane* plane = new Plane(10.0f, 10.0f, 100, 100);
+  Plane* plane = new Plane(50.0f, 50.0f, 1, 1);
   plane->SetMaterial(mm);
-  plane->SetPosition(vec3(0.0f, -0.45f, 0.0f));
+//  plane->SetPosition(vec3(0.0f, -0.45f, 0.0f));
   _objs.push_back(plane);
 
-  p->SetUniform("light.position", _camera.View() * vec4(1.0f, 1.0f, 1.0f, 0.0f));
-  p->SetUniform("light.intensity", vec3(0.8f, 0.8f, 0.8f));
-  //Mesh* pig = new Mesh("pig_triangulated.obj");
-  //pig->SetMaterial(m);
-  //pig->SetPosition(vec3(0.0f, 0.0f, 0.0f));
-  //pig->Rotate(90.0f, vec3(0.0f, 1.0f, 0.0f));
-  //_objs.push_back(pig);
+  p->SetUniform("light.intensity", vec3(0.9f, 0.9f, 0.9f));
+  p->SetUniform("light.exponent", 30.f);
+  p->SetUniform("light.cutoff", 15.0f);
 
-  //char name[20];
-  //float x, z;
-  //for(int i = 0; i < 5; i++)
-  //{
-  //  _snprintf(name, 20, "lights[%d].position", i);
-  //  x = 2.0 * cos((TWOPI / 5) * i);
-  //  z = 2.0 * sin((TWOPI / 5) * i);
-  //  p->SetUniform(name, _camera.View() * vec4(x, 1.2f, z + 1.0f, 1.0f));
-  //}
-  //p->SetUniform("lights[0].intensity", vec3(0.0f, 0.8f, 0.8f));
-  //p->SetUniform("lights[1].intensity", vec3(0.0f, 0.0f, 0.8f));
-  //p->SetUniform("lights[2].intensity", vec3(0.8f, 0.0f, 0.0f));
-  //p->SetUniform("lights[3].intensity", vec3(0.0f, 0.8f, 0.0f));
-  //p->SetUniform("lights[4].intensity", vec3(0.8f, 0.8f, 0.8f));
+  _angle = 0.0f;
 }
 
 void GLWidget::resizeGL( int w, int h )
@@ -134,11 +122,15 @@ void GLWidget::paintGL()
 {
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-  mat4 view = glm::lookAt(vec3(0.0f, 0.0f, 2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+  vec4 light_pos = vec4(10.0f * cos(_angle), 10.0f, 10.0f * sin(_angle), 1.0f);
+  mat4 view = _camera.View();
   for(SceneObjects::iterator it = _objs.begin(); it != _objs.end(); ++it)
   {
     GLSLProgram* p = (*it)->Program();
-    mat4 mv = _camera.View() * (*it)->Model();
+    mat4 mv = view * (*it)->Model();
+    p->SetUniform("light.position", view * light_pos);
+    mat3 nm = mat3(vec3(view[0]), vec3(view[1]), vec3(view[2]));
+    p->SetUniform("light.direction", nm * vec3(-light_pos));
     p->SetUniform("model_view_matrix", mv);
     p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
     p->SetUniform("mvp", _camera.Projection() * mv);
@@ -177,6 +169,12 @@ void GLWidget::keyPressEvent( QKeyEvent* e )
     case Qt::Key_C:
       _camera.DeltaPitch(0.1f);
       break;
+    case Qt::Key_F:
+      _camera.Up();
+      break;
+    case Qt::Key_G:
+      _camera.Down();
+      break;
     default:
       QGLWidget::keyPressEvent( e );
   }
@@ -193,7 +191,8 @@ GLWidget::~GLWidget()
 
 void GLWidget::Idle()
 {
-//  Drawable* d = _objs.front();
-//  d->Move(vec3(0.1, 0.0, 0.0));
+  _angle += 0.01f;
+  if(_angle > TWOPI)
+    _angle -= TWOPI;
   updateGL();
 }
