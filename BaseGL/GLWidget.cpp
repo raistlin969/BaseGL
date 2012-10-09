@@ -1,5 +1,6 @@
 #include "GLWidget.h"
 #include <QtCore/qcoreapplication.h>
+#include <qimage.h>
 #include <iostream>
 #include <math.h>
 #include <gli/gli.hpp>
@@ -13,6 +14,7 @@
 #include "VboTeapot.h"
 #include "Material.h"
 #include "Plane.h"
+#include "Cube.h"
 #include "Mesh.h"
 #include "Defines.h"
 
@@ -68,48 +70,44 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("fog_vert.glsl", "fog_frag.glsl");
+  p->CompileAndLinkShaders("tex_vert.glsl", "tex_frag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
-
-  VboTorus* torus = new VboTorus(1.75f * 0.75f, 0.75f * 0.75f, 50, 50);
-  torus->SetPosition(vec3(-1.0f, 0.75f, 3.0f));
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
+  glFrontFace(GL_CCW);
+  Cube* cube = new Cube;
   Material* m = new Material(p);
-  m->Ambient(0.9f * 0.3f, 0.5f * 0.3f, 0.3f * 0.3f);
-  m->Diffuse(0.9f, 0.5f, 0.3f);
-  m->Specular(0.0f, 0.0f, 0.0f);
-  m->Shininess(180.0f);
-  torus->SetMaterial(m);
-  torus->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
-  //_objs.push_back(torus);
+  m->Diffuse(0.9f, 0.9f, 0.9f);
+  m->Specular(0.55f, 0.55f, 0.55f);
+  m->Ambient(0.1f, 0.1f, 0.1f);
+  m->Shininess(10.0f);
+  cube->SetMaterial(m);
+  _objs.push_back(cube);
 
-  float dist = 0.0f;
-  for(int i = 0; i < 4; ++i)
-  {
-    VBOTeapot* tea = new VBOTeapot(14, glm::mat4(1.0f));
-    tea->SetMaterial(m);
-    tea->SetPosition(vec3(dist * 0.6f - 1.0f, 0.0f, -dist));
-    tea->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
-    _objs.push_back(tea);
-    dist += 7.0f;
-  }
-  
+  p->SetUniform("light.intensity", vec3(1.0f, 1.0f, 1.0f));
+  p->SetUniform("light.position", vec4(0.0f, 0.0f, 0.0f, 1.0f));
+  QImage brick_img = QGLWidget::convertToGLFormat(QImage("brick1.jpg", "JPG"));
+  QImage moss_img = QGLWidget::convertToGLFormat(QImage("moss.png", "PNG"));
 
-  Material* mm = new Material(p);
-  mm->Ambient(0.2f, 0.2f, 0.2f);
-  mm->Diffuse(0.7f, 0.7f, 0.7f);
-  mm->Specular(0.0f, 0.0f, 0.0f);
-  mm->Shininess(180.0f);
+  GLuint tid[2];
+  glGenTextures(2, tid);
 
-  Plane* plane = new Plane(50.0f, 50.0f, 1, 1);
-  plane->SetMaterial(mm);
-//  plane->SetPosition(vec3(0.0f, -0.45f, 0.0f));
-  _objs.push_back(plane);
+  glActiveTexture(GL_TEXTURE0);
 
-  p->SetUniform("light.intensity", vec3(0.9f, 0.9f, 0.9f));
-  p->SetUniform("fog.max_dist", 30.0f);
-  p->SetUniform("fog.min_dist", 1.0f);
-  p->SetUniform("fog.color", vec3(0.5f, 0.5f, 0.5f));
+  glBindTexture(GL_TEXTURE_2D, tid[0]);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, brick_img.width(), brick_img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, brick_img.bits());
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  p->SetUniform("brick_tex", 0);
+
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, tid[1]);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, moss_img.width(), moss_img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, moss_img.bits());
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  p->SetUniform("moss_tex", 1);
+
   _angle = 0.0f;
 }
 
@@ -133,7 +131,6 @@ void GLWidget::paintGL()
   {
     GLSLProgram* p = (*it)->Program();
     mat4 mv = view * (*it)->Model();
-    p->SetUniform("light.position", view * light_pos);
     p->SetUniform("model_view_matrix", mv);
     p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
     p->SetUniform("mvp", _camera.Projection() * mv);
