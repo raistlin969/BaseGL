@@ -73,9 +73,6 @@ void GLWidget::initializeGL()
   p->CompileAndLinkShaders("tex_vert.glsl", "tex_frag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  glFrontFace(GL_CCW);
   Cube* cube = new Cube;
   Material* m = new Material(p);
   m->Diffuse(0.9f, 0.9f, 0.9f);

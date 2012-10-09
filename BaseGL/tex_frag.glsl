@@ -47,9 +47,25 @@ void Phong(vec3 pos, vec3 norm, out vec3 ambient_diffuse, out vec3 spec)
 void main()
 {
   vec3 ambient_diffuse, spec;
-  vec4 brick_color = texture(brick_tex, tex_coord);
-  vec4 moss_color = texture(moss_tex, tex_coord);
-  Phong(position, normal, ambient_diffuse, spec);
-  vec4 tex_color = mix(brick_color, moss_color, moss_color.a);
-  frag_color = (vec4(ambient_diffuse, 1.0) * tex_color) + vec4(spec, 1.0);
+//  vec4 brick_color = texture(brick_tex, tex_coord);
+//  vec4 moss_color = texture(moss_tex, tex_coord);
+//  Phong(position, normal, ambient_diffuse, spec);
+//  vec4 tex_color = mix(brick_color, moss_color, moss_color.a);
+//  frag_color = (vec4(ambient_diffuse, 1.0) * tex_color) + vec4(spec, 1.0);
+  vec4 base_color = texture(brick_tex, tex_coord);
+  vec4 alpha_map = texture(moss_tex, tex_coord);
+  if(alpha_map.a < 0.15)
+    discard;
+  else
+  {
+    if(gl_FrontFacing)
+    {
+      Phong(position, normal, ambient_diffuse, spec);
+    }
+    else
+    {
+      Phong(position, -normal, ambient_diffuse, spec);
+    }
+    frag_color = vec4(ambient_diffuse + spec, 1.0) * base_color;
+  }
 }
