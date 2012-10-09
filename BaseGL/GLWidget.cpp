@@ -70,22 +70,22 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("tex_vert.glsl", "tex_frag.glsl");
+  p->CompileAndLinkShaders("NormalMapVert.glsl", "NormalMapFrag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
-  Cube* cube = new Cube;
-  Material* m = new Material(p);
-  m->Diffuse(0.9f, 0.9f, 0.9f);
-  m->Specular(0.55f, 0.55f, 0.55f);
-  m->Ambient(0.1f, 0.1f, 0.1f);
-  m->Shininess(10.0f);
-  cube->SetMaterial(m);
-  _objs.push_back(cube);
 
-  p->SetUniform("light.intensity", vec3(1.0f, 1.0f, 1.0f));
-  p->SetUniform("light.position", vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  QImage brick_img = QGLWidget::convertToGLFormat(QImage("brick1.jpg", "JPG"));
-  QImage moss_img = QGLWidget::convertToGLFormat(QImage("moss.png", "PNG"));
+  Mesh* ogre = new Mesh("bs_ears.obj");
+  _objs.push_back(ogre);
+  Material* m = new Material(p);
+//  m->Diffuse(0.9f, 0.9f, 0.9f);
+  m->Specular(0.2f, 0.2f, 0.2f);
+  m->Ambient(0.1f, 0.1f, 0.1f);
+  m->Shininess(1.0f);
+  ogre->SetMaterial(m);
+  p->SetUniform("light.intensity", vec3(0.9f, 0.9f, 0.9f));
+
+  QImage brick_img = QGLWidget::convertToGLFormat(QImage("ogre_diffuse.png", "PNG"));
+  QImage moss_img = QGLWidget::convertToGLFormat(QImage("ogre_normalmap.png", "PNG"));
 
   GLuint tid[2];
   glGenTextures(2, tid);
@@ -96,16 +96,16 @@ void GLWidget::initializeGL()
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, brick_img.width(), brick_img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, brick_img.bits());
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  p->SetUniform("brick_tex", 0);
+  p->SetUniform("color_tex", 0);
 
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, tid[1]);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, moss_img.width(), moss_img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, moss_img.bits());
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  p->SetUniform("moss_tex", 1);
+  p->SetUniform("normal_map_tex", 1);
 
-  _angle = 0.0f;
+  _angle = (float)(TO_RADIANS(100.0));
 }
 
 void GLWidget::resizeGL( int w, int h )
@@ -128,6 +128,7 @@ void GLWidget::paintGL()
   {
     GLSLProgram* p = (*it)->Program();
     mat4 mv = view * (*it)->Model();
+    p->SetUniform("light.position", view * vec4(10.0f * cos(_angle), 1.0f, 10.0f * sin(_angle), 1.0f));
     p->SetUniform("model_view_matrix", mv);
     p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
     p->SetUniform("mvp", _camera.Projection() * mv);
@@ -188,7 +189,7 @@ GLWidget::~GLWidget()
 
 void GLWidget::Idle()
 {
-  _angle += 0.01f;
+  _angle += 0.0001f;
   if(_angle > TWOPI)
     _angle -= TWOPI;
   updateGL();
