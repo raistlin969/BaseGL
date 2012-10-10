@@ -35,5 +35,6 @@ public:
   void Down();
   mat4 Projection();
   mat4 View();
+  vec3 Position();
   void Projection(float fov, float aspect, float near, float far);
 };

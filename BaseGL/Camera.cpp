@@ -71,6 +71,11 @@ mat4 Camera::Projection()
   return _projection;
 }
 
+vec3 Camera::Position()
+{
+  return _position;
+}
+
 mat4 Camera::View()
 {
   _up = glm::cross(_right, _direction);

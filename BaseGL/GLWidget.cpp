@@ -16,6 +16,7 @@
 #include "Plane.h"
 #include "Cube.h"
 #include "Mesh.h"
+#include "SkyBox.h"
 #include "Defines.h"
 
 GLWidget::GLWidget(const QGLFormat& format, QWidget* parent)
@@ -70,40 +71,69 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("NormalMapVert.glsl", "NormalMapFrag.glsl");
+  p->CompileAndLinkShaders("CubeMapVert.glsl", "CubeMapFrag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
-  Mesh* ogre = new Mesh("bs_ears.obj");
-  _objs.push_back(ogre);
+  VBOTeapot* tea = new VBOTeapot(14, mat4(1.0f));
+  SkyBox* sky = new SkyBox;
+
   Material* m = new Material(p);
-//  m->Diffuse(0.9f, 0.9f, 0.9f);
+  m->Diffuse(0.9f, 0.9f, 0.9f);
   m->Specular(0.2f, 0.2f, 0.2f);
   m->Ambient(0.1f, 0.1f, 0.1f);
   m->Shininess(1.0f);
-  ogre->SetMaterial(m);
+
+  tea->SetMaterial(m);
+  sky->SetMaterial(m);
+  _objs.push_back(sky);
+  _objs.push_back(tea);
+
+  tea->SetPosition(vec3(0.0f, -1.0f, 0.0f));
+  tea->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
   p->SetUniform("light.intensity", vec3(0.9f, 0.9f, 0.9f));
 
-  QImage brick_img = QGLWidget::convertToGLFormat(QImage("Textures/ogre_diffuse.png", "PNG"));
-  QImage moss_img = QGLWidget::convertToGLFormat(QImage("Textures/ogre_normalmap.png", "PNG"));
+  QImage posx = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_positive_x.png", "PNG")).mirrored();
+  QImage negx = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_negative_x.png", "PNG")).mirrored();
+  QImage posy = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_positive_y.png", "PNG")).mirrored();
+  QImage negy = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_negative_y.png", "PNG")).mirrored();
+  QImage posz = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_positive_z.png", "PNG")).mirrored();
+  QImage negz = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_negative_z.png", "PNG")).mirrored();
 
-  GLuint tid[2];
-  glGenTextures(2, tid);
+  //QImage posx = QGLWidget::convertToGLFormat(QImage("Textures/terrain_positive_x.png", "PNG")).mirrored();
+  //QImage negx = QGLWidget::convertToGLFormat(QImage("Textures/terrain_negative_x.png", "PNG")).mirrored();
+  //QImage posy = QGLWidget::convertToGLFormat(QImage("Textures/terrain_positive_y.png", "PNG")).mirrored();
+  //QImage negy = QGLWidget::convertToGLFormat(QImage("Textures/terrain_negative_y.png", "PNG")).mirrored();
+  //QImage posz = QGLWidget::convertToGLFormat(QImage("Textures/terrain_positive_z.png", "PNG")).mirrored();
+  //QImage negz = QGLWidget::convertToGLFormat(QImage("Textures/terrain_negative_z.png", "PNG")).mirrored();
+
+  //QImage posx = QGLWidget::convertToGLFormat(QImage("Textures/snow_positive_x.jpg", "JPG")).mirrored();
+  //QImage negx = QGLWidget::convertToGLFormat(QImage("Textures/snow_negative_x.jpg", "JPG")).mirrored();
+  //QImage posy = QGLWidget::convertToGLFormat(QImage("Textures/snow_positive_y.jpg", "JPG")).mirrored();
+  //QImage negy = QGLWidget::convertToGLFormat(QImage("Textures/snow_negative_y.jpg", "JPG")).mirrored();
+  //QImage posz = QGLWidget::convertToGLFormat(QImage("Textures/snow_positive_z.jpg", "JPG")).mirrored();
+  //QImage negz = QGLWidget::convertToGLFormat(QImage("Textures/snow_negative_z.jpg", "JPG")).mirrored();
 
   glActiveTexture(GL_TEXTURE0);
+  GLuint tid;
+  glGenTextures(1, &tid);
 
-  glBindTexture(GL_TEXTURE_2D, tid[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, brick_img.width(), brick_img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, brick_img.bits());
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  p->SetUniform("color_tex", 0);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, tid);
 
-  glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, tid[1]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, moss_img.width(), moss_img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, moss_img.bits());
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  p->SetUniform("normal_map_tex", 1);
+  glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, posx.width(), posx.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, posx.bits());
+  glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGBA, negx.width(), negx.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, negx.bits());
+  glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, posy.width(), posy.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, posy.bits());
+  glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGBA, negy.width(), negy.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, negy.bits());
+  glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, posz.width(), posz.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, posz.bits());
+  glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, negz.width(), negz.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, negz.bits());
+
+  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+  p->SetUniform("cube_map_tex", 0);
 
   _angle = (float)(TO_RADIANS(100.0));
 }
@@ -122,16 +152,23 @@ void GLWidget::paintGL()
 {
   glClearColor(0.5, 0.5, 0.5, 1.0);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-  vec4 light_pos = vec4(10.0f * cos(_angle), 10.0f, 10.0f * sin(_angle), 1.0f);
+  //vec4 light_pos = vec4(10.0f * cos(_angle), 10.0f, 10.0f * sin(_angle), 1.0f);
   mat4 view = _camera.View();
+  vec3 camera_pos = _camera.Position();
+  //camera_pos = vec3(7.0f * cos(_angle), 2.0f, 7.0f * sin(_angle));
+  //view = glm::lookAt(camera_pos, vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
   for(SceneObjects::iterator it = _objs.begin(); it != _objs.end(); ++it)
   {
     GLSLProgram* p = (*it)->Program();
     mat4 mv = view * (*it)->Model();
-    p->SetUniform("light.position", view * vec4(10.0f * cos(_angle), 1.0f, 10.0f * sin(_angle), 1.0f));
-    p->SetUniform("model_view_matrix", mv);
-    p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
+//    p->SetUniform("light.position", view * vec4(10.0f * cos(_angle), 1.0f, 10.0f * sin(_angle), 1.0f));
+//    p->SetUniform("model_view_matrix", mv);
+//    p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
+    p->SetUniform("world_camera_pos", camera_pos);
+    p->SetUniform("material_color", vec4(0.5f, 0.5f, 0.5f, 1.0f));
+    p->SetUniform("reflect_factor", 0.85f);
     p->SetUniform("mvp", _camera.Projection() * mv);
+    p->SetUniform("model_matrix", (*it)->Model());
     (*it)->Render();
   }
 }
