@@ -84,8 +84,8 @@ void GLWidget::initializeGL()
   ogre->SetMaterial(m);
   p->SetUniform("light.intensity", vec3(0.9f, 0.9f, 0.9f));
 
-  QImage brick_img = QGLWidget::convertToGLFormat(QImage("ogre_diffuse.png", "PNG"));
-  QImage moss_img = QGLWidget::convertToGLFormat(QImage("ogre_normalmap.png", "PNG"));
+  QImage brick_img = QGLWidget::convertToGLFormat(QImage("Textures/ogre_diffuse.png", "PNG"));
+  QImage moss_img = QGLWidget::convertToGLFormat(QImage("Textures/ogre_normalmap.png", "PNG"));
 
   GLuint tid[2];
   glGenTextures(2, tid);
