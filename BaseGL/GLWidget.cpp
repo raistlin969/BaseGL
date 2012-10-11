@@ -71,7 +71,7 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("CubeMapVert.glsl", "CubeMapFrag.glsl");
+  p->CompileAndLinkShaders("RefractVert.glsl", "RefractFrag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
@@ -166,7 +166,8 @@ void GLWidget::paintGL()
 //    p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
     p->SetUniform("world_camera_pos", camera_pos);
     p->SetUniform("material_color", vec4(0.5f, 0.5f, 0.5f, 1.0f));
-    p->SetUniform("reflect_factor", 0.85f);
+    p->SetUniform("reflect_factor", 0.1f);
+    p->SetUniform("eta", 0.94f);
     p->SetUniform("mvp", _camera.Projection() * mv);
     p->SetUniform("model_matrix", (*it)->Model());
     (*it)->Render();
