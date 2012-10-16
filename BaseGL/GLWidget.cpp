@@ -19,6 +19,8 @@
 #include "SkyBox.h"
 #include "Defines.h"
 
+GLuint fbo;
+
 GLWidget::GLWidget(const QGLFormat& format, QWidget* parent)
   : QGLWidget(format, parent), _log(get_global_log())
 {
@@ -71,71 +73,65 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("RefractVert.glsl", "RefractFrag.glsl");
+  p->CompileAndLinkShaders("RenderToTexVert.glsl", "RenderToTexFrag.glsl");
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glEnable(GL_DEPTH_TEST);
 
   VBOTeapot* tea = new VBOTeapot(14, mat4(1.0f));
-  SkyBox* sky = new SkyBox;
+  Cube* cube = new Cube;
 
   Material* m = new Material(p);
   m->Diffuse(0.9f, 0.9f, 0.9f);
-  m->Specular(0.2f, 0.2f, 0.2f);
+  m->Specular(0.95f, 0.95f, 0.95f);
   m->Ambient(0.1f, 0.1f, 0.1f);
-  m->Shininess(1.0f);
+  m->Shininess(100.0f);
 
   tea->SetMaterial(m);
-  sky->SetMaterial(m);
-  _objs.push_back(sky);
   _objs.push_back(tea);
 
-  tea->SetPosition(vec3(0.0f, -1.0f, 0.0f));
+  tea->SetPosition(vec3(0.0f, -1.5f, 0.0f));
   tea->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
-  p->SetUniform("light.intensity", vec3(0.9f, 0.9f, 0.9f));
+  p->SetUniform("light.intensity", vec3(1.0f, 1.0f, 1.0f));
 
-  QImage posx = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_positive_x.png", "PNG")).mirrored();
-  QImage negx = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_negative_x.png", "PNG")).mirrored();
-  QImage posy = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_positive_y.png", "PNG")).mirrored();
-  QImage negy = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_negative_y.png", "PNG")).mirrored();
-  QImage posz = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_positive_z.png", "PNG")).mirrored();
-  QImage negz = QGLWidget::convertToGLFormat(QImage("Textures/brightday2_negative_z.png", "PNG")).mirrored();
+  Material* mm = new Material(p);
+  mm->Diffuse(0.9f, 0.9f, 0.9f);
+  mm->Specular(0.0f, 0.0f, 0.0f);
+  mm->Ambient(0.1f, 0.1f, 0.1f);
+  mm->Shininess(0.0f);
 
-  //QImage posx = QGLWidget::convertToGLFormat(QImage("Textures/terrain_positive_x.png", "PNG")).mirrored();
-  //QImage negx = QGLWidget::convertToGLFormat(QImage("Textures/terrain_negative_x.png", "PNG")).mirrored();
-  //QImage posy = QGLWidget::convertToGLFormat(QImage("Textures/terrain_positive_y.png", "PNG")).mirrored();
-  //QImage negy = QGLWidget::convertToGLFormat(QImage("Textures/terrain_negative_y.png", "PNG")).mirrored();
-  //QImage posz = QGLWidget::convertToGLFormat(QImage("Textures/terrain_positive_z.png", "PNG")).mirrored();
-  //QImage negz = QGLWidget::convertToGLFormat(QImage("Textures/terrain_negative_z.png", "PNG")).mirrored();
+  cube->SetMaterial(mm);
+  _objs.push_back(cube);
 
-  //QImage posx = QGLWidget::convertToGLFormat(QImage("Textures/snow_positive_x.jpg", "JPG")).mirrored();
-  //QImage negx = QGLWidget::convertToGLFormat(QImage("Textures/snow_negative_x.jpg", "JPG")).mirrored();
-  //QImage posy = QGLWidget::convertToGLFormat(QImage("Textures/snow_positive_y.jpg", "JPG")).mirrored();
-  //QImage negy = QGLWidget::convertToGLFormat(QImage("Textures/snow_negative_y.jpg", "JPG")).mirrored();
-  //QImage posz = QGLWidget::convertToGLFormat(QImage("Textures/snow_positive_z.jpg", "JPG")).mirrored();
-  //QImage negz = QGLWidget::convertToGLFormat(QImage("Textures/snow_negative_z.jpg", "JPG")).mirrored();
-
+  ///////////////////////SETUP FBO/////////////////////////////////
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  GLuint render_tex;
+  glGenTextures(1, &render_tex);
   glActiveTexture(GL_TEXTURE0);
-  GLuint tid;
-  glGenTextures(1, &tid);
+  glBindTexture(GL_TEXTURE_2D, render_tex);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  glBindTexture(GL_TEXTURE_CUBE_MAP, tid);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, render_tex, 0);
 
-  glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, posx.width(), posx.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, posx.bits());
-  glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGBA, negx.width(), negx.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, negx.bits());
-  glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, posy.width(), posy.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, posy.bits());
-  glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGBA, negy.width(), negy.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, negy.bits());
-  glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, posz.width(), posz.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, posz.bits());
-  glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, negz.width(), negz.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, negz.bits());
+  //create depth buffer
+  GLuint depth_buffer;
+  glGenRenderbuffers(1, &depth_buffer);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 512, 512);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
+  GLenum draw_buffers[] = {GL_COLOR_ATTACHMENT0};
+  glDrawBuffers(1, draw_buffers);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  ///////////////////////////////////////////////////////////////////
 
-  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-  p->SetUniform("cube_map_tex", 0);
-
-  _angle = (float)(TO_RADIANS(100.0));
+  //one pixel white texture
+  GLuint white_tex_handle;
+  GLubyte white_tex[] = {255, 255, 255, 255};
+  glActiveTexture(GL_TEXTURE1);
+  glGenTextures(1, &white_tex_handle);
+  glBindTexture(GL_TEXTURE_2D, white_tex_handle);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white_tex);
 }
 
 void GLWidget::resizeGL( int w, int h )
@@ -145,33 +141,57 @@ void GLWidget::resizeGL( int w, int h )
   _width = w;
   _height = h;
   //_proj = glm::perspective(70.0f, (float)w/h, 0.3f, 100.0f);
-  _camera.Projection(70.f, (float)w/h, 0.3f, 100.0f);
+  _camera.Projection(60.f, (float)w/h, 0.3f, 100.0f);
 }
 
 void GLWidget::paintGL()
 {
   glClearColor(0.5, 0.5, 0.5, 1.0);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  Drawable* tea = _objs[0];
+  Drawable* cube = _objs[1];
+  GLSLProgram* p = tea->Program();
+
+  p->SetUniform("render_tex", 1);
+  glViewport(0, 0, 512, 512);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  mat4 view = glm::lookAt(vec3(0.0f, 0.0f, 7.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+  mat4 projection = glm::perspective(60.0f, 1.0f, 0.3f, 100.0f);
+  p->SetUniform("light.position", vec4(0.0f, 0.0f, 0.0f, 1.0f));
+  mat4 mv = view * tea->Model();
+  p->SetUniform("model_view_matrix", mv);
+  p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
+  p->SetUniform("mvp", projection * mv);
+  tea->Render();
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  p = cube->Program();
+  p->SetUniform("render_tex", 0);
+  glViewport(0, 0, _width, _height);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-  //vec4 light_pos = vec4(10.0f * cos(_angle), 10.0f, 10.0f * sin(_angle), 1.0f);
-  mat4 view = _camera.View();
-  vec3 camera_pos = _camera.Position();
-  //camera_pos = vec3(7.0f * cos(_angle), 2.0f, 7.0f * sin(_angle));
-  //view = glm::lookAt(camera_pos, vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-  for(SceneObjects::iterator it = _objs.begin(); it != _objs.end(); ++it)
-  {
-    GLSLProgram* p = (*it)->Program();
-    mat4 mv = view * (*it)->Model();
+  
+  view = _camera.View();
+  _camera.Projection(45.0f, (float)_width/_height, 0.3f, 100.0f);
+  mv = view * cube->Model();
+  p->SetUniform("model_view_matrix", mv);
+  p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
+  p->SetUniform("mvp", _camera.Projection() * mv);
+  cube->Render();
+  //for(SceneObjects::iterator it = _objs.begin(); it != _objs.end(); ++it)
+  //{
+  //  GLSLProgram* p = (*it)->Program();
+  //  mat4 mv = view * (*it)->Model();
 //    p->SetUniform("light.position", view * vec4(10.0f * cos(_angle), 1.0f, 10.0f * sin(_angle), 1.0f));
 //    p->SetUniform("model_view_matrix", mv);
 //    p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
-    p->SetUniform("world_camera_pos", camera_pos);
-    p->SetUniform("material_color", vec4(0.5f, 0.5f, 0.5f, 1.0f));
-    p->SetUniform("reflect_factor", 0.1f);
-    p->SetUniform("eta", 0.94f);
-    p->SetUniform("mvp", _camera.Projection() * mv);
-    p->SetUniform("model_matrix", (*it)->Model());
-    (*it)->Render();
-  }
+  //  p->SetUniform("world_camera_pos", camera_pos);
+  //  p->SetUniform("material_color", vec4(0.5f, 0.5f, 0.5f, 1.0f));
+  //  p->SetUniform("reflect_factor", 0.1f);
+  //  p->SetUniform("eta", 0.94f);
+  //  p->SetUniform("mvp", _camera.Projection() * mv);
+  //  p->SetUniform("model_matrix", (*it)->Model());
+  //  (*it)->Render();
+  //}
 }
 
 void GLWidget::keyPressEvent( QKeyEvent* e )
