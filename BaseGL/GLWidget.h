@@ -16,6 +16,7 @@
 #include "Text.h"
 #include "Camera.h"
 #include "Drawable.h"
+#include "FullscreenQuad.h"
 
 class GLWidget : public QGLWidget
 {
@@ -40,6 +41,9 @@ protected:
   
 protected:
   void DumpGLInfo(bool dump_extentions = false);
+  void SetupFBO();
+  void Pass1();
+  void Pass2();
 
 protected slots:
   virtual void Idle();
@@ -59,6 +63,11 @@ protected:
 
   boost::log::sources::severity_logger<severity_level>& _log;
   SceneObjects _objs;
+
+  FullscreenQuad* _quad;
+  GLuint _pass_index_1;
+  GLuint _pass_index_2;
+  GLuint _fbo;
 
 protected:
   _glGenVertexArrays glGenVertexArrays;

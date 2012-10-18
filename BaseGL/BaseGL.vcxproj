@@ -142,6 +142,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="Drawable.cpp" />
+    <ClCompile Include="FullscreenQuad.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_GLWidget.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -218,6 +219,7 @@
     <ClInclude Include="Cube.h" />
     <ClInclude Include="Defines.h" />
     <ClInclude Include="Drawable.h" />
+    <ClInclude Include="FullscreenQuad.h" />
     <ClInclude Include="GeneratedFiles\ui_GLWidget.h" />
     <ClInclude Include="GLSLProgram.h" />
     <ClInclude Include="Logger.h" />

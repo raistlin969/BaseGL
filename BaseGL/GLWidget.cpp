@@ -19,7 +19,6 @@
 #include "SkyBox.h"
 #include "Defines.h"
 
-GLuint fbo;
 
 GLWidget::GLWidget(const QGLFormat& format, QWidget* parent)
   : QGLWidget(format, parent), _log(get_global_log())
@@ -33,6 +32,8 @@ GLWidget::GLWidget(const QGLFormat& format, QWidget* parent)
   _timer = new QTimer(this);
   _elapsed.start();
   _frames = 0;
+  _width = width();
+  _height = height();
 }
 
 void GLWidget::DumpGLInfo(bool dump_extentions)
@@ -73,65 +74,58 @@ void GLWidget::initializeGL()
   _timer->start(0);
 
   GLSLProgram* p = new GLSLProgram;
-  p->CompileAndLinkShaders("RenderToTexVert.glsl", "RenderToTexFrag.glsl");
-  glClearColor(0.0, 0.0, 0.0, 1.0);
+  p->CompileAndLinkShaders("SobelVert.glsl", "SobelFrag.glsl");
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glEnable(GL_DEPTH_TEST);
 
+  Material* tea_material = new Material(p);
+  tea_material->Diffuse(0.9f, 0.9f, 0.9f);
+  tea_material->Specular(0.95f, 0.95f, 0.95f);
+  tea_material->Ambient(0.1f, 0.1f, 0.1f);
+  tea_material->Shininess(100.0f);
+
+  Material* plane_material = new Material(p);
+  plane_material->Diffuse(0.4f, 0.4f, 0.4f);
+  plane_material->Specular(0.0f, 0.0f, 0.0f);
+  plane_material->Ambient(0.1f, 0.1f, 0.1f);
+  plane_material->Shininess(1.0f);
+
+  Material* torus_material = new Material(p);
+  torus_material->Diffuse(0.9f, 0.5f, 0.2f);
+  torus_material->Specular(0.95f, 0.95f, 0.95f);
+  torus_material->Ambient(0.1f, 0.1f, 0.1f);
+  torus_material->Shininess(100.0f);
+
   VBOTeapot* tea = new VBOTeapot(14, mat4(1.0f));
-  Cube* cube = new Cube;
+  Plane* plane = new Plane(50.0f, 50.0f, 1, 1);
+  float c = 1.5f;
+  VboTorus* torus = new VboTorus(0.7f * c, 0.3f * c, 50, 50);
 
-  Material* m = new Material(p);
-  m->Diffuse(0.9f, 0.9f, 0.9f);
-  m->Specular(0.95f, 0.95f, 0.95f);
-  m->Ambient(0.1f, 0.1f, 0.1f);
-  m->Shininess(100.0f);
-
-  tea->SetMaterial(m);
+  tea->SetMaterial(tea_material);
+  tea->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
   _objs.push_back(tea);
 
-  tea->SetPosition(vec3(0.0f, -1.5f, 0.0f));
-  tea->Rotate(-90.0f, vec3(1.0f, 0.0f, 0.0f));
+  plane->SetMaterial(plane_material);
+  plane->SetPosition(vec3(0.0f, -0.75f, 0.0f));
+  _objs.push_back(plane);
+
+  torus->SetMaterial(torus_material);
+  torus->SetPosition(vec3(1.0f, 1.0f, 3.0f));
+  torus->Rotate(90.0f, vec3(1.0f, 0.0f, 0.0f));
+  _objs.push_back(torus);
+
+  SetupFBO();
+
+  _pass_index_1 = glGetSubroutineIndex(p->Handle(), GL_FRAGMENT_SHADER, "Pass1");
+  _pass_index_2 = glGetSubroutineIndex(p->Handle(), GL_FRAGMENT_SHADER, "Pass2");
+  p->SetUniform("width", _width);
+  p->SetUniform("height", _height);
+  p->SetUniform("edge_threshold", 0.1f);
+  p->SetUniform("render_tex", 0);
   p->SetUniform("light.intensity", vec3(1.0f, 1.0f, 1.0f));
-
-  Material* mm = new Material(p);
-  mm->Diffuse(0.9f, 0.9f, 0.9f);
-  mm->Specular(0.0f, 0.0f, 0.0f);
-  mm->Ambient(0.1f, 0.1f, 0.1f);
-  mm->Shininess(0.0f);
-
-  cube->SetMaterial(mm);
-  _objs.push_back(cube);
-
-  ///////////////////////SETUP FBO/////////////////////////////////
-  glGenFramebuffers(1, &fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  GLuint render_tex;
-  glGenTextures(1, &render_tex);
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, render_tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, render_tex, 0);
-
-  //create depth buffer
-  GLuint depth_buffer;
-  glGenRenderbuffers(1, &depth_buffer);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 512, 512);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
-  GLenum draw_buffers[] = {GL_COLOR_ATTACHMENT0};
-  glDrawBuffers(1, draw_buffers);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  ///////////////////////////////////////////////////////////////////
-
-  //one pixel white texture
-  GLuint white_tex_handle;
-  GLubyte white_tex[] = {255, 255, 255, 255};
-  glActiveTexture(GL_TEXTURE1);
-  glGenTextures(1, &white_tex_handle);
-  glBindTexture(GL_TEXTURE_2D, white_tex_handle);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white_tex);
+  _angle = PI / 4.0;
+  _quad = new FullscreenQuad;
+  _quad->SetMaterial(plane_material);  //doesnt really use a material, just ned a GLSLProgram ref
 }
 
 void GLWidget::resizeGL( int w, int h )
@@ -146,52 +140,8 @@ void GLWidget::resizeGL( int w, int h )
 
 void GLWidget::paintGL()
 {
-  glClearColor(0.5, 0.5, 0.5, 1.0);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  Drawable* tea = _objs[0];
-  Drawable* cube = _objs[1];
-  GLSLProgram* p = tea->Program();
-
-  p->SetUniform("render_tex", 1);
-  glViewport(0, 0, 512, 512);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  mat4 view = glm::lookAt(vec3(0.0f, 0.0f, 7.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
-  mat4 projection = glm::perspective(60.0f, 1.0f, 0.3f, 100.0f);
-  p->SetUniform("light.position", vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  mat4 mv = view * tea->Model();
-  p->SetUniform("model_view_matrix", mv);
-  p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
-  p->SetUniform("mvp", projection * mv);
-  tea->Render();
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  p = cube->Program();
-  p->SetUniform("render_tex", 0);
-  glViewport(0, 0, _width, _height);
-  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-  
-  view = _camera.View();
-  _camera.Projection(45.0f, (float)_width/_height, 0.3f, 100.0f);
-  mv = view * cube->Model();
-  p->SetUniform("model_view_matrix", mv);
-  p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
-  p->SetUniform("mvp", _camera.Projection() * mv);
-  cube->Render();
-  //for(SceneObjects::iterator it = _objs.begin(); it != _objs.end(); ++it)
-  //{
-  //  GLSLProgram* p = (*it)->Program();
-  //  mat4 mv = view * (*it)->Model();
-//    p->SetUniform("light.position", view * vec4(10.0f * cos(_angle), 1.0f, 10.0f * sin(_angle), 1.0f));
-//    p->SetUniform("model_view_matrix", mv);
-//    p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
-  //  p->SetUniform("world_camera_pos", camera_pos);
-  //  p->SetUniform("material_color", vec4(0.5f, 0.5f, 0.5f, 1.0f));
-  //  p->SetUniform("reflect_factor", 0.1f);
-  //  p->SetUniform("eta", 0.94f);
-  //  p->SetUniform("mvp", _camera.Projection() * mv);
-  //  p->SetUniform("model_matrix", (*it)->Model());
-  //  (*it)->Render();
-  //}
+  Pass1();
+  Pass2();
 }
 
 void GLWidget::keyPressEvent( QKeyEvent* e )
@@ -247,8 +197,71 @@ GLWidget::~GLWidget()
 
 void GLWidget::Idle()
 {
-  _angle += 0.0001f;
+  _angle += 0.001f;
   if(_angle > TWOPI)
     _angle -= TWOPI;
   updateGL();
+}
+
+void GLWidget::SetupFBO()
+{
+  ///////////////////////SETUP FBO/////////////////////////////////
+  glGenFramebuffers(1, &_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
+  GLuint render_tex;
+  glGenTextures(1, &render_tex);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, render_tex);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, _width, _height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, render_tex, 0);
+
+  //create depth buffer
+  GLuint depth_buffer;
+  glGenRenderbuffers(1, &depth_buffer);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, _width, _height);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
+  GLenum draw_buffers[] = {GL_COLOR_ATTACHMENT0};
+  glDrawBuffers(1, draw_buffers);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  ///////////////////////////////////////////////////////////////////
+}
+
+void GLWidget::Pass1()
+{
+  glBindFramebuffer(GL_FRAMEBUFFER, _fbo);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &_pass_index_1);
+  //mat4 view = glm::lookAt(vec3(7.0f * cos(_angle), 4.0f, 7.0f * sin(_angle)), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f));
+  //mat4 projection = glm::perspective(60.0f, (float)_width/_height, 0.3f, 100.0f);
+  mat4 view = _camera.View();
+  mat4 projection = _camera.Projection();
+  for(SceneObjects::iterator it = _objs.begin(); it != _objs.end(); ++it)
+  {
+    GLSLProgram* p = (*it)->Program();
+    mat4 mv = view * (*it)->Model();
+    p->SetUniform("light.position", vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    p->SetUniform("model_view_matrix", mv);
+    p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
+    p->SetUniform("mvp", projection * mv);
+    (*it)->Render();
+  }
+}
+
+void GLWidget::Pass2()
+{
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &_pass_index_2);
+  GLSLProgram* p = _quad->Program();
+  mat4 model = mat4(1.0f);
+  mat4 view = mat4(1.0f);
+  mat4 projection = mat4(1.0f);
+  mat4 mv = view * model;
+  p->SetUniform("model_view_matrix", mv);
+  p->SetUniform("normal_matrix", mat3(vec3(mv[0]), vec3(mv[1]), vec3(mv[2])));
+  p->SetUniform("mvp", projection * mv);
+  _quad->Render();
 }
